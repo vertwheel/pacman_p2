@@ -214,7 +214,93 @@ class SurvivalAgent(Agent):
         if not ghost_positions:
             return api.makeMove(random.choice(legal), legal)
 
-        # Calculate distances from Pacman to each ghost for each possible move
+        # Calculate distances from Pacman to each ghost for each possible moveclass CornerSeekingAgentAvoidGhost(Agent):
+
+    def __init__(self):
+        self.corners_to_visit = []  # Initialize as an empty list
+        self.target_corner = None
+        self.intermediate_target = None
+        self.last_action = None  # Track the last action taken
+
+    def getAction(self, state):
+        print("Starting a new action call...")
+
+        # Get the current position of Pacman
+        pacman_pos = api.whereAmI(state)
+        print("Current Pacman position:", pacman_pos)
+
+
+        # Get the positions of all ghosts
+        ghost_positions = api.ghosts(state)
+
+
+
+
+        # If corners_to_visit is empty, fill it with the corners and shuffle
+        if not self.corners_to_visit:
+            self.corners_to_visit = list(api.corners(state))
+            random.shuffle(self.corners_to_visit)
+            self.target_corner = self.corners_to_visit.pop()  # Start with the first corner in the shuffled list
+
+        # If Pacman is at the target corner, set the next corner as the target (if any are left)
+        if pacman_pos == self.target_corner and self.corners_to_visit:
+            self.target_corner = self.corners_to_visit.pop()
+
+        # Get the positions of all food pellets in sensory range
+        food_positions = api.food(state)
+
+        # If there's food nearby, set the nearest food pellet as the immediate target
+        if food_positions:
+            distances_to_food = [util.manhattanDistance(pacman_pos, food) for food in food_positions]
+            nearest_food_pos = food_positions[distances_to_food.index(min(distances_to_food))]
+            self.intermediate_target = nearest_food_pos
+            print("Set nearest food as intermediate target:", nearest_food_pos)
+
+        # If there's an intermediate target, move towards it; otherwise, move towards the corner
+        target = self.intermediate_target if self.intermediate_target else self.target_corner
+        print("Current target:", target)
+
+        # Decide on a move that takes Pacman closer to the target
+        legal = api.legalActions(state)
+        
+        # Remove "STOP" and the reverse of the last action from the legal moves to prevent oscillation
+        if Directions.STOP in legal:
+            legal.remove(Directions.STOP)
+        if self.last_action and Directions.REVERSE[self.last_action] in legal:
+            legal.remove(Directions.REVERSE[self.last_action])
+            print("Removed reverse action:", Directions.REVERSE[self.last_action])
+
+        moves = [(direction, api.makeMove(direction, legal)) for direction in legal]
+        sorted_moves = sorted(moves, key=lambda x: util.manhattanDistance(getNextPosition(pacman_pos, x[0]), target))
+
+        # Iterate through the sorted moves and pick the first legal one
+        for move in sorted_moves:
+
+            if not ghost_positions: # If there are no ghosts, just return a random move
+
+                if move[1] in legal:
+                    self.last_action = move[0]  # Update the last action
+                    print("Picking a legal move:", move[0], "towards:", target)
+                    return move[1]
+
+
+
+        moves_distances = []
+        for direction in legal:
+            next_pos = getNextPosition(pacman_pos, direction)
+            #distances_to_ghosts = [util.manhattanDistance(next_pos, ghost) for ghost in ghost_positions]
+            distances_to_ghosts = [util.manhattanDistance(pacman_pos, ghost) for ghost in ghost_positions]
+            min_distance = min(distances_to_ghosts)  # Find the closest ghost for this move
+            moves_distances.append((direction, min_distance))
+        
+        best_move = max(moves_distances, key=lambda x: x[1])
+
+        return api.makeMove(best_move[0], legal)
+                   
+        
+        # If, for some reason, no moves are legal (shouldn't happen), stop
+        #return api.makeMove(Directions.STOP, legal)
+
         moves_distances = []
         for direction in legal:
             next_pos = getNextPosition(pacman_pos, direction)
@@ -495,3 +581,95 @@ class CornerSeekingAgentNoFood(Agent):
         if direction == Directions.WEST:
             return (x - 1, y)
         return position  # If direction is STOP or invalid
+
+
+
+
+
+class CornerSeekingAgentAvoidGhost(Agent):
+
+    def __init__(self):
+        self.corners_to_visit = []  # Initialize as an empty list
+        self.target_corner = None
+        self.intermediate_target = None
+        self.last_action = None  # Track the last action taken
+
+    def getAction(self, state):
+        print("Starting a new action call...")
+
+        # Get the current position of Pacman
+        pacman_pos = api.whereAmI(state)
+        print("Current Pacman position:", pacman_pos)
+
+
+        # Get the positions of all ghosts
+        ghost_positions = api.ghosts(state)
+
+
+
+
+        # If corners_to_visit is empty, fill it with the corners and shuffle
+        if not self.corners_to_visit:
+            self.corners_to_visit = list(api.corners(state))
+            random.shuffle(self.corners_to_visit)
+            self.target_corner = self.corners_to_visit.pop()  # Start with the first corner in the shuffled list
+
+        # If Pacman is at the target corner, set the next corner as the target (if any are left)
+        if pacman_pos == self.target_corner and self.corners_to_visit:
+            self.target_corner = self.corners_to_visit.pop()
+
+        # Get the positions of all food pellets in sensory range
+        food_positions = api.food(state)
+
+        # If there's food nearby, set the nearest food pellet as the immediate target
+        if food_positions:
+            distances_to_food = [util.manhattanDistance(pacman_pos, food) for food in food_positions]
+            nearest_food_pos = food_positions[distances_to_food.index(min(distances_to_food))]
+            self.intermediate_target = nearest_food_pos
+            print("Set nearest food as intermediate target:", nearest_food_pos)
+
+        # If there's an intermediate target, move towards it; otherwise, move towards the corner
+        target = self.intermediate_target if self.intermediate_target else self.target_corner
+        print("Current target:", target)
+
+        # Decide on a move that takes Pacman closer to the target
+        legal = api.legalActions(state)
+        
+        # Remove "STOP" and the reverse of the last action from the legal moves to prevent oscillation
+        if Directions.STOP in legal:
+            legal.remove(Directions.STOP)
+        if self.last_action and Directions.REVERSE[self.last_action] in legal:
+            legal.remove(Directions.REVERSE[self.last_action])
+            print("Removed reverse action:", Directions.REVERSE[self.last_action])
+
+        moves = [(direction, api.makeMove(direction, legal)) for direction in legal]
+        sorted_moves = sorted(moves, key=lambda x: util.manhattanDistance(getNextPosition(pacman_pos, x[0]), target))
+
+        # Iterate through the sorted moves and pick the first legal one
+        for move in sorted_moves:
+
+            if not ghost_positions: # If there are no ghosts, just return a random move
+
+                if move[1] in legal:
+                    self.last_action = move[0]  # Update the last action
+                    print("Picking a legal move:", move[0], "towards:", target)
+                    return move[1]
+
+
+
+        moves_distances = []
+        for direction in legal:
+            next_pos = getNextPosition(pacman_pos, direction)
+            #distances_to_ghosts = [util.manhattanDistance(next_pos, ghost) for ghost in ghost_positions]
+            distances_to_ghosts = [util.manhattanDistance(pacman_pos, ghost) for ghost in ghost_positions]
+            min_distance = min(distances_to_ghosts)  # Find the closest ghost for this move
+            moves_distances.append((direction, min_distance))
+        
+        best_move = max(moves_distances, key=lambda x: x[1])
+
+        return api.makeMove(best_move[0], legal)
+                   
+        
+        # If, for some reason, no moves are legal (shouldn't happen), stop
+        #return api.makeMove(Directions.STOP, legal)
+
